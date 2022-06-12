@@ -5,7 +5,8 @@
     "lib": ["es2017", "DOM"],
     "declaration": true,
     "outDir": "./dist",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true
   },
   "include": ["src/**/*"]
 }

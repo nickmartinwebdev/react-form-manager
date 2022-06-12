@@ -7,7 +7,7 @@ export const addItemAtIndex = <T>(array: T[], item: T, index?: number): T[] => {
 
 export const removeItemAtIndex = <T>(array: T[], index: number): T[] => {
   const newArray = [...array];
-  newArray.splice(index);
+  newArray.splice(index, 1);
   return newArray;
 };
 
