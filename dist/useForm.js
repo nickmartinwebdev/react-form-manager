@@ -103,7 +103,7 @@ export const useForm = (props) => {
             }
         });
         return map;
-    }, [initialValues, setFormState]);
+    }, [initialValues, setFormState, formState]);
     const validate = useCallback(() => {
         const validateForms = (validation, formState) => {
             const errors = {};

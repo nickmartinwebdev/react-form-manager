@@ -5,7 +5,7 @@ export const addItemAtIndex = (array, item, index) => {
 };
 export const removeItemAtIndex = (array, index) => {
     const newArray = [...array];
-    newArray.splice(index);
+    newArray.splice(index, 1);
     return newArray;
 };
 export const updateItemAtIndex = (array, index, item) => {

@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
     "module": "esnext",
-    "target": "es2015",
+    "target": "es2017",
     "lib": ["es2017", "DOM"],
     "declaration": true,
     "outDir": "./dist",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "test/**/*"],
+  "files": ["src/index.ts"]
 }

@@ -14,22 +14,6 @@ it("should return initial values as values", () => {
   expect(result.current.values).toMatchObject(initialValues);
 });
 
-it("should have expected actions available", () => {
-  const initialValues = {
-    title: "",
-    description: "",
-    questions: [{ text: "", answer: "" }],
-  };
-  const { result } = renderHook(() => useForm({ initialValues }));
-  const { description, title, questions } = result.current.actions;
-
-  expect(description).toHaveProperty("update");
-  expect(title).toHaveProperty("update");
-  expect(questions).toHaveProperty("addItem");
-  expect(questions).toHaveProperty("updateItem");
-  expect(questions).toHaveProperty("removeItem");
-});
-
 it("calling actions for non-array values should update form state accordingly", () => {
   const initialValues = {
     age: 0,
@@ -37,6 +21,9 @@ it("calling actions for non-array values should update form state accordingly", 
     questions: [{ text: "", answer: "" }],
   };
   const { result } = renderHook(() => useForm({ initialValues }));
+
+  expect(result.current.actions.description).toHaveProperty("update");
+  expect(result.current.actions.age).toHaveProperty("update");
 
   act(() => {
     result.current.actions.description.update({ value: "updated description" });
@@ -60,6 +47,10 @@ it("calling actions for array values should update form state accordingly", () =
     questions: [{ text: "", answer: "" }],
   };
   const { result } = renderHook(() => useForm({ initialValues }));
+
+  expect(result.current.actions.questions).toHaveProperty("addItem");
+  expect(result.current.actions.questions).toHaveProperty("updateItem");
+  expect(result.current.actions.questions).toHaveProperty("removeItem");
 
   act(() => {
     result.current.actions.questions.addItem({
