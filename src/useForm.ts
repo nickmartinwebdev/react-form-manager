@@ -182,6 +182,7 @@ export const useForm = <T extends Record<string, any>>(props: Props<T>) => {
               ...formState,
               [typedKey]: payload.value,
             };
+
             clearError(typedKey, updatedFormState);
             setFormState(updatedFormState);
           },
@@ -189,7 +190,7 @@ export const useForm = <T extends Record<string, any>>(props: Props<T>) => {
       }
     });
     return map as ActionCreatorMap<T>;
-  }, [initialValues, setFormState]);
+  }, [initialValues, setFormState, formState]);
 
   const validate = useCallback(() => {
     const validateForms = <X extends Record<string, any>>(
