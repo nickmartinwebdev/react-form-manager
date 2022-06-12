@@ -1,0 +1,37 @@
+{
+  "name": "simply-forms",
+  "version": "0.1.0",
+  "description": "A package to manage state for react forms",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nickmartinwebdev/react-form-manager.git"
+  },
+  "keywords": [
+    "React",
+    "Form",
+    "State"
+  ],
+  "author": "Nicholas Martin",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nickmartinwebdev/react-form-manager/issues"
+  },
+  "homepage": "https://github.com/nickmartinwebdev/react-form-manager#readme",
+  "dependencies": {
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.12",
+    "@types/react-dom": "^18.0.5",
+    "typescript": "^4.7.3"
+  }
+}
