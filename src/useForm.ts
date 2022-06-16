@@ -46,12 +46,101 @@ const createArrayActions = <T extends Array<any>>(
   };
 };
 
-type Actions<T> = { update: (payload: { value: T }) => void };
+type ActionMap<T extends Record<string, any>> = {
+  [Key in keyof T]: T[Key] extends Array<infer U>
+    ? {
+        update: (
+          payload: ((values: T[Key]) => T[Key]) | { value: T[Key] }
+        ) => void;
+        items: {
+          update: (
+            payload:
+              | ((value: T[Key][number]) => T[Key][number])
+              | { value: T[Key][number] }
+          ) => void;
+          fields: ActionMap<T[Key][number]>;
+        }[];
+      }
+    : {
+        update: (
+          payload: ((values: T[Key]) => T[Key]) | { value: T[Key] }
+        ) => void;
+      };
+};
 
-type ActionCreatorMap<T> = {
-  [Key in keyof T]: T[Key] extends Array<any>
-    ? ArrayActions<T[Key][number]>
-    : Actions<T[Key]>;
+const createActionMap = <T extends Record<string, any>>(
+  state: T,
+  setState: (state: T) => void
+): ActionMap<T> => {
+  const actionMap: Partial<ActionMap<T>> = {};
+  Object.entries(state).forEach(([key, value]) => {
+    const typedKey = key as keyof T;
+    const typedValue = value as T[keyof T];
+
+    if (Array.isArray(typedValue)) {
+      actionMap[typedKey] = {
+        update: (payload) => {
+          if (typeof payload === "function") {
+            const typedPayload = payload as (values: T[keyof T]) => T[keyof T];
+            setState({ ...state, [typedKey]: typedPayload(state[typedKey]) });
+          } else {
+            const typedPayload = payload as { value: T[keyof T] };
+            setState({ ...state, [typedKey]: typedPayload.value });
+          }
+        },
+        items: typedValue.map((value, index) => ({
+          update: (payload) => {
+            if (typeof payload === "function") {
+              const typedPayload = payload as (
+                value: T[keyof T][number]
+              ) => T[keyof T][number];
+              setState({
+                ...state,
+                [typedKey]: updateItemAtIndex(
+                  typedValue,
+                  index,
+                  typedPayload(state[typedKey][index])
+                ),
+              });
+            } else {
+              const typedPayload = payload as { value: T[keyof T][number] };
+              setState({
+                ...state,
+                [typedKey]: updateItemAtIndex(
+                  typedValue,
+                  index,
+                  typedPayload.value
+                ),
+              });
+            }
+          },
+          fields: createActionMap<T[keyof T][number]>(
+            value as T[keyof T][number],
+            (state: T[keyof T][number]) => {
+              setState({
+                ...state,
+                [typedKey]: updateItemAtIndex(typedValue, index, state),
+              });
+            }
+          ),
+        })),
+      } as ActionMap<T>[keyof T];
+    } else {
+      actionMap[typedKey] = {
+        update: (payload) => {
+          if (typeof payload === "function") {
+            const typedPayload = payload as (values: T[keyof T]) => T[keyof T];
+            setState({ ...state, [typedKey]: typedPayload(state[typedKey]) });
+          } else {
+            const typedPayload = payload as { value: T[keyof T] };
+            setState({ ...state, [typedKey]: typedPayload.value });
+          }
+        },
+      } as ActionMap<T>[keyof T];
+    }
+  });
+
+  return actionMap as ActionMap<T>;
 };
 
 type FormErrorMap<T extends Record<string, any>> = {
@@ -140,57 +229,8 @@ export const useForm = <T extends Record<string, any>>(props: Props<T>) => {
   };
 
   const actions = useMemo(() => {
-    const map: Partial<ActionCreatorMap<T>> = {};
-    Object.keys(initialValues).forEach((key) => {
-      const typedKey = key as keyof T;
-      if (Array.isArray(initialValues[typedKey])) {
-        map[typedKey] = createArrayActions<
-          typeof initialValues[typeof typedKey]
-        >([
-          (item) => {
-            const updatedFormState: T = {
-              ...formState,
-              [typedKey]: addItemAtIndex(formState[typedKey], item),
-            };
-            clearError(typedKey, updatedFormState);
-            setFormState(updatedFormState);
-          },
-          (index, item) => {
-            const updatedFormState: T = {
-              ...formState,
-              [typedKey]: updateItemAtIndex(formState[typedKey], index, item),
-            };
-            clearError(typedKey, updatedFormState);
-            setFormState(updatedFormState);
-          },
-          (index) => {
-            const updatedFormState: T = {
-              ...formState,
-              [typedKey]: removeItemAtIndex<T[keyof T]>(
-                formState[typedKey],
-                index
-              ),
-            };
-            clearError(typedKey, updatedFormState);
-            setFormState(updatedFormState);
-          },
-        ]) as ActionCreatorMap<T>[keyof T];
-      } else {
-        map[typedKey] = {
-          update: (payload) => {
-            const updatedFormState = {
-              ...formState,
-              [typedKey]: payload.value,
-            };
-
-            clearError(typedKey, updatedFormState);
-            setFormState(updatedFormState);
-          },
-        } as ActionCreatorMap<T>[keyof T];
-      }
-    });
-    return map as ActionCreatorMap<T>;
-  }, [initialValues, setFormState, formState]);
+    return createActionMap(formState, (state) => setFormState(state));
+  }, [setFormState, formState]);
 
   const validate = useCallback(() => {
     const validateForms = <X extends Record<string, any>>(
