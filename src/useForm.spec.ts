@@ -5,16 +5,30 @@ import { useForm } from ".";
 
 it("should return initial values as values", () => {
   const initialValues = {
-    title: "",
-    description: "",
-    questions: [{ text: "", answer: "" }],
+    name: { text: '' },
+    age: 0,
   };
-  const { result } = renderHook(() => useForm({ initialValues }));
+
+  const { result } = renderHook(() => useForm({
+    initialValues, active: {
+      name: {
+        fields: {
+          text: {
+            name: (a) => !!a.name.text
+          }
+        }
+      }
+    }
+  }));
+
+  result.current.fields.name.callbacks
 
   expect(result.current.values).toMatchObject(initialValues);
 });
 
-it("calling actions for non-array values should update form state accordingly", () => {
+
+
+it("should have the correct properties for object values", () => {
   const initialValues = {
     age: 0,
     description: "",
