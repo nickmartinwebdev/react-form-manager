@@ -25,8 +25,7 @@ it("should return field values from initial values", () => {
     })
   );
 
-  console.log(result.current.fields);
-
+  // testing existance of top level values
   expect(result.current.fields.string.value).toBe("string");
   expect(result.current.fields.number.value).toBe(10);
   expect(result.current.fields.boolean.value).toBe(true);
@@ -42,7 +41,14 @@ it("should return field values from initial values", () => {
   expect(result.current.fields.primitiveArray.value).toMatchObject(["string"]);
   expect(result.current.fields.emptyArray.value).toMatchObject([]);
 
-  // expect(result.current.fields.object.fields.property1.value).toBe(
-  //   "property 1"
-  // );
+  // testing existance of nested object values
+  expect(result.current.fields.object.fields.property1.value).toBe(
+    "property 1"
+  );
+  expect(
+    result.current.fields.object.fields.objectproperty.fields.property2.value
+  ).toBe("property 2");
+
+  // testing existance of array item values
+  expect(result.current.fields.primitiveArray.items[0].value).toBe("string");
 });

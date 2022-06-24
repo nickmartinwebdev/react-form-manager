@@ -55,148 +55,83 @@ const createFormData = <
     const typedKey = key as keyof T;
     const typedValue = value as T[keyof T];
 
-    // If value is an array
+    const conditionalValues = evaluateConditionalValues(
+      typedKey,
+      state,
+      conditionalMap
+    );
+
+    const possiblyEmpty = {
+      conditionalValues: conditionalValues as ConditionalValueResults<
+        T[keyof T],
+        T,
+        ConditionalValues<T[keyof T], T>
+      >,
+    } as DropEmpty<{
+      conditionalValues: ConditionalValueResults<
+        T[keyof T],
+        T,
+        ConditionalValues<T[keyof T], T>
+      >;
+    }>;
+
+    let items = {};
+
     if (Array.isArray(typedValue)) {
       if (typedValue.length) {
+        // if array of objects
         if (typedValue[0] === Object(typedValue[0])) {
-          const conditionalValues = evaluateConditionalValues(
-            typedKey,
-            state,
-            conditionalMap
-          );
-          // Need to drop properties conditional values and submit if required
-          const possiblyEmpty = {
-            conditionalValues: conditionalValues as ConditionalValueResults<
-              T[keyof T],
-              T,
-              ConditionalValues<T[keyof T], T>
-            >,
-          } as DropEmpty<{
-            conditionalValues: ConditionalValueResults<
-              T[keyof T],
-              T,
-              ConditionalValues<T[keyof T], T>
-            >;
-          }>;
-
-          formData[typedKey] = {
-            value: state[typedKey],
-            error: null,
-            ...possiblyEmpty,
-            items: [],
-          } as FormData<T, R, S>[keyof T];
+          items = {
+            items: typedValue.map((item) => {
+              const nestedConditionalMap = conditionalMap[typedKey]
+                ? conditionalMap[typedKey]["fields"]
+                : ({} as ConditionalValues<T[keyof T], T>);
+              return {
+                fields: createFormData(
+                  item as typeof typedValue[number],
+                  nestedConditionalMap
+                ),
+              };
+            }),
+          };
         } else {
-          const conditionalValues = evaluateConditionalValues(
-            typedKey,
-            state,
-            conditionalMap
-          );
-
-          // Need to drop properties conditional values and submit if required
-          const possiblyEmpty = {
-            conditionalValues: conditionalValues as ConditionalValueResults<
-              T[keyof T],
-              T,
-              ConditionalValues<T[keyof T], T>
-            >,
-          } as DropEmpty<{
-            conditionalValues: ConditionalValueResults<
-              T[keyof T],
-              T,
-              ConditionalValues<T[keyof T], T>
-            >;
-          }>;
-
-          formData[typedKey] = {
-            value: state[typedKey],
-            error: null,
-            ...possiblyEmpty,
-            items: [],
-          } as FormData<T, R, S>[keyof T];
+          // if array of primitives
+          items = {
+            items: typedValue.map((item) => {
+              return {
+                value: item as typeof typedValue[number],
+              };
+            }),
+          };
         }
-      } else {
-        const conditionalValues = evaluateConditionalValues(
-          typedKey,
-          state,
-          conditionalMap
-        );
-
-        // Need to drop properties conditional values and submit if required
-        const possiblyEmpty = {
-          conditionalValues: conditionalValues as ConditionalValueResults<
-            T[keyof T],
-            T,
-            ConditionalValues<T[keyof T], T>
-          >,
-        } as DropEmpty<{
-          conditionalValues: ConditionalValueResults<
-            T[keyof T],
-            T,
-            ConditionalValues<T[keyof T], T>
-          >;
-        }>;
-
-        formData[typedKey] = {
-          value: state[typedKey],
-          error: null,
-          ...possiblyEmpty,
-          items: [],
-        } as FormData<T, R, S>[keyof T];
       }
-    } else if (typeof typedValue === "object") {
-      const conditionalValues = evaluateConditionalValues(
-        typedKey,
-        state,
-        conditionalMap
-      );
-
-      // Need to drop properties conditional values and submit if required
-      const possiblyEmpty = {
-        conditionalValues: conditionalValues as ConditionalValueResults<
-          T[keyof T],
-          T,
-          ConditionalValues<T[keyof T], T>
-        >,
-      } as DropEmpty<{
-        conditionalValues: ConditionalValueResults<
-          T[keyof T],
-          T,
-          ConditionalValues<T[keyof T], T>
-        >;
-      }>;
-
-      formData[typedKey] = {
-        value: state[typedKey],
-        error: null,
-        ...possiblyEmpty,
-      } as FormData<T, R, S>[keyof T];
-    } else {
-      const conditionalValues = evaluateConditionalValues(
-        typedKey,
-        state,
-        conditionalMap
-      );
-
-      // Need to drop properties conditional values and submit if required
-      const possiblyEmpty = {
-        conditionalValues: conditionalValues as ConditionalValueResults<
-          T[keyof T],
-          T,
-          ConditionalValues<T[keyof T], T>
-        >,
-      } as DropEmpty<{
-        conditionalValues: ConditionalValueResults<
-          T[keyof T],
-          T,
-          ConditionalValues<T[keyof T], T>
-        >;
-      }>;
-      formData[typedKey] = {
-        value: state[typedKey],
-        error: null,
-        ...possiblyEmpty,
-      } as FormData<T, R, S>[keyof T];
     }
+
+    let nestedFields = {};
+
+    if (!Array.isArray(typedValue) && typedValue === Object(typedValue)) {
+      const nestedConditionalMap = conditionalMap[typedKey]
+        ? conditionalMap[typedKey]["fields"]
+        : ({} as ConditionalValues<T[keyof T], T>);
+
+      nestedFields = {
+        fields: createFormData(typedValue, nestedConditionalMap),
+      };
+    }
+
+    const field: FormData<T, R, S>[keyof T] = {
+      value: typedValue,
+      error: null,
+      ...possiblyEmpty,
+      ...nestedFields,
+      ...items,
+    } as FormData<T, R, S>[keyof T];
+
+    // // Need to drop properties conditional values and submit if required
+
+    // // if value is an object
+
+    formData[typedKey] = field;
   });
 
   return formData as FormData<T, R, S>;
