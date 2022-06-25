@@ -34,7 +34,7 @@ const d = cMap(
   }
 );
 
-export type ConditionalValues<
+export type ComputedValues<
   T extends Record<string, any>,
   U extends Record<string, any>,
   R
@@ -42,14 +42,14 @@ export type ConditionalValues<
   [Key in keyof T]?: T[Key] extends Array<infer I>
     ? I extends Record<string, any>
       ? {
-          conditional?: Partial<Record<string, ActiveFunc<T[Key], U, R>>>;
-        } & { fields?: ConditionalValues<I, U, R> }
-      : { conditional?: Partial<Record<string, ActiveFunc<T[Key], U, R>>> }
+          computed?: Partial<Record<string, ActiveFunc<T[Key], U, R>>>;
+        } & { fields?: ComputedValues<I, U, R> }
+      : { computed?: Partial<Record<string, ActiveFunc<T[Key], U, R>>> }
     : T[Key] extends Record<string, any>
-    ? { conditional?: Partial<Record<string, ActiveFunc<T[Key], U, R>>> } & {
-        fields?: ConditionalValues<T[Key], U, R>;
+    ? { computed?: Partial<Record<string, ActiveFunc<T[Key], U, R>>> } & {
+        fields?: ComputedValues<T[Key], U, R>;
       }
-    : { conditional?: Partial<Record<string, ActiveFunc<T[Key], U, R>>> };
+    : { computed?: Partial<Record<string, ActiveFunc<T[Key], U, R>>> };
 };
 
 type ValidatorFunc<T> = (values: T) => string | null;
@@ -70,15 +70,11 @@ export type ValidationValues<T extends Record<string, any>> = {
     : { validator?: ValidatorFunc<T[Key]> };
 };
 
-export type ConditionalValueResults<
+export type ComputedValuesResults<
   T,
   U,
   R,
-  C extends ConditionalValues<T, U, R>[keyof ConditionalValues<
-    T,
-    U,
-    R
-  >]["conditional"]
+  C extends ComputedValues<T, U, R>[keyof ComputedValues<T, U, R>]["computed"]
 > = {
   [Key in keyof C]: ReturnType<C[Key]>;
 };
@@ -118,7 +114,7 @@ type NonObjectArrayData<T> = {
 export type FormData<
   T,
   R,
-  C extends ConditionalValues<T, T, R>,
+  C extends ComputedValues<T, T, R>,
   S extends SubmitFuncMap<T>
 > = {
   [Key in keyof T]: T[Key] extends Array<infer I>
@@ -127,8 +123,8 @@ export type FormData<
           value: T[Key];
           error: string | null;
         } & DropEmpty<{
-          conditionalValues: C[Key]["conditional"] extends Record<string, any>
-            ? ConditionalValueResults<T[Key], T, R, C[Key]["conditional"]>
+          computedValues: C[Key]["computed"] extends Record<string, any>
+            ? ComputedValuesResults<T[Key], T, R, C[Key]["computed"]>
             : never;
         }> &
           DropEmptyFunction<{
@@ -149,8 +145,8 @@ export type FormData<
           value: T[Key];
           error: string | null;
         } & DropEmpty<{
-          conditionalValues: C[Key]["conditional"] extends Record<string, any>
-            ? ConditionalValueResults<T[Key], T, R, C[Key]["conditional"]>
+          computedValues: C[Key]["computed"] extends Record<string, any>
+            ? ComputedValuesResults<T[Key], T, R, C[Key]["computed"]>
             : never;
         }> &
           DropEmptyFunction<{
@@ -163,8 +159,8 @@ export type FormData<
         value: T[Key];
         error: string | null;
       } & DropEmpty<{
-        conditionalValues: C[Key]["conditional"] extends Record<string, any>
-          ? ConditionalValueResults<T[Key], T, R, C[Key]["conditional"]>
+        computedValues: C[Key]["computed"] extends Record<string, any>
+          ? ComputedValuesResults<T[Key], T, R, C[Key]["computed"]>
           : never;
       }> &
         DropEmptyFunction<{
@@ -183,8 +179,8 @@ export type FormData<
         value: T[Key];
         error: string | null;
       } & DropEmpty<{
-        conditionalValues: C[Key]["conditional"] extends Record<string, any>
-          ? ConditionalValueResults<T[Key], T, R, C[Key]["conditional"]>
+        computedValues: C[Key]["computed"] extends Record<string, any>
+          ? ComputedValuesResults<T[Key], T, R, C[Key]["computed"]>
           : never;
       }> &
         DropEmptyFunction<{

@@ -1,22 +1,22 @@
 import { useState } from "react";
 
 import {
-  ConditionalValues,
+  ComputedValues,
   SubmitFuncMap,
   ValidationValues,
   FormData,
-  ConditionalValueResults,
+  ComputedValuesResults,
   DropEmpty,
 } from "./types";
 
 interface Props<
   T,
   TReturn,
-  R extends ConditionalValues<T, T, TReturn>,
+  R extends ComputedValues<T, T, TReturn>,
   S extends SubmitFuncMap<T>
 > {
   initialValues: T;
-  conditionalValues?: R;
+  computedValues?: R;
   validation?: ValidationValues<T>;
   submit?: S;
 }
@@ -25,35 +25,34 @@ const evaluateConditionalValues = <
   T extends Record<string, any>,
   U,
   R,
-  C extends ConditionalValues<T, U, R>
+  C extends ComputedValues<T, U, R>
 >(
   nestedState: T,
   state: U,
   key: keyof T,
-  conditionalMap: C
-): ConditionalValueResults<T, U, R, C[keyof C]["conditional"]> => {
-  const conditionalValues: Partial<
-    ConditionalValueResults<T, U, R, C[keyof C]["conditional"]>
+  computedValueMap: C
+): ComputedValuesResults<T, U, R, C[keyof C]["computed"]> => {
+  const computedValues: Partial<
+    ComputedValuesResults<T, U, R, C[keyof C]["computed"]>
   > = {};
-  if (conditionalMap[key] && conditionalMap[key]["conditional"]) {
-    Object.entries(conditionalMap[key]["conditional"]).forEach(
+  if (computedValueMap[key] && computedValueMap[key]["computed"]) {
+    Object.entries(computedValueMap[key]["computed"]).forEach(
       ([cKey, cValue]) => {
-        const typedCKey = cKey as keyof C[keyof T]["conditional"];
-        const typedCValue =
-          cValue as C[keyof T]["conditional"][typeof typedCKey];
+        const typedCKey = cKey as keyof C[keyof T]["computed"];
+        const typedCValue = cValue as C[keyof T]["computed"][typeof typedCKey];
         const cResult = typedCValue(nestedState[key], state);
-        conditionalValues[typedCKey] = cResult as ReturnType<
-          C[keyof C]["conditional"][keyof C[keyof T]["conditional"]]
+        computedValues[typedCKey] = cResult as ReturnType<
+          C[keyof C]["computed"][keyof C[keyof T]["computed"]]
         >;
       }
     );
   }
 
-  return conditionalValues as ConditionalValueResults<
+  return computedValues as ComputedValuesResults<
     T,
     U,
     R,
-    C[keyof C]["conditional"]
+    C[keyof C]["computed"]
   >;
 };
 
@@ -71,12 +70,12 @@ const createFormData = <
   T,
   U,
   TReturn,
-  R extends ConditionalValues<T, T, TReturn>,
+  R extends ComputedValues<T, T, TReturn>,
   S extends SubmitFuncMap<T>
 >(
   state: T,
   allState: U,
-  conditionalMap: R
+  computedValuesMap: R
 ): FormData<T, TReturn, R, S> => {
   const formData: Partial<FormData<T, TReturn, R, S>> = {};
 
@@ -84,12 +83,12 @@ const createFormData = <
     const typedKey = key as keyof T;
     const typedValue = value as T[keyof T];
 
-    const conditionalValues = deleteEmptyObjectProperties({
-      conditionalValues: evaluateConditionalValues(
+    const computedValues = deleteEmptyObjectProperties({
+      computedValues: evaluateConditionalValues(
         state,
         allState,
         typedKey,
-        conditionalMap as ConditionalValues<T, U, TReturn>
+        computedValuesMap as ComputedValues<T, U, TReturn>
       ),
     });
 
@@ -101,14 +100,14 @@ const createFormData = <
         if (typedValue[0] === Object(typedValue[0])) {
           items = {
             items: typedValue.map((item) => {
-              const nestedConditionalMap = conditionalMap[typedKey]
-                ? conditionalMap[typedKey]["fields"]
-                : ({} as ConditionalValues<T[keyof T], T, TReturn>);
+              const nestedComputedValuesMap = computedValuesMap[typedKey]
+                ? computedValuesMap[typedKey]["fields"]
+                : ({} as ComputedValues<T[keyof T], T, TReturn>);
               return {
                 fields: createFormData(
                   item as typeof typedValue[number],
                   allState,
-                  nestedConditionalMap
+                  nestedComputedValuesMap
                 ),
               };
             }),
@@ -129,19 +128,19 @@ const createFormData = <
     let nestedFields = {};
 
     if (!Array.isArray(typedValue) && typedValue === Object(typedValue)) {
-      const nestedConditionalMap = conditionalMap[typedKey]
-        ? conditionalMap[typedKey]["fields"]
-        : ({} as ConditionalValues<T[keyof T], T, TReturn>);
+      const nestedComputedValuesMap = computedValuesMap[typedKey]
+        ? computedValuesMap[typedKey]["fields"]
+        : ({} as ComputedValues<T[keyof T], T, TReturn>);
 
       nestedFields = {
-        fields: createFormData(typedValue, allState, nestedConditionalMap),
+        fields: createFormData(typedValue, allState, nestedComputedValuesMap),
       };
     }
 
     const field: FormData<T, TReturn, R, S>[keyof T] = {
       value: typedValue,
       error: null,
-      ...conditionalValues,
+      ...computedValues,
       ...nestedFields,
       ...items,
     } as FormData<T, TReturn, R, S>[keyof T];
@@ -159,12 +158,12 @@ const createFormData = <
 export const useForm = <
   T,
   TReturn,
-  R extends ConditionalValues<T, T, TReturn>,
+  R extends ComputedValues<T, T, TReturn>,
   S extends SubmitFuncMap<T>
 >(
   props: Props<T, TReturn, R, S>
 ) => {
-  const { initialValues, conditionalValues = {}, validation, submit } = props;
+  const { initialValues, computedValues = {}, validation, submit } = props;
 
   const [state, setState] = useState<T>(initialValues);
   const [errorMap, setErrorMap] = useState<{}>({});
@@ -172,7 +171,7 @@ export const useForm = <
   const form: FormData<T, TReturn, R, S> = createFormData(
     state,
     state,
-    conditionalValues
+    computedValues
   );
 
   return {
