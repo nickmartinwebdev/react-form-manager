@@ -52,3 +52,72 @@ it("should return field values from initial values", () => {
   // testing existance of array item values
   expect(result.current.fields.primitiveArray.items[0].value).toBe("string");
 });
+
+it("should correctly evaluate any conditional values", () => {
+  const initialValues = {
+    object: {
+      property1: "property 1",
+      objectproperty: {
+        property2: "property 2",
+      },
+    },
+    objectArray: [{ property3: "property 3" }],
+    primitiveArray: ["string"],
+    string: "string",
+  };
+
+  const { result } = renderHook(() =>
+    useForm({
+      initialValues,
+      conditionalValues: {
+        object: {
+          conditional: {
+            test: (value) => value.property1,
+          },
+          fields: {
+            property1: {
+              conditional: {
+                test2: (_, values) => {
+                  console.log(values);
+                  return values.string === "string";
+                },
+              },
+            },
+          },
+        },
+        objectArray: {
+          fields: {
+            property3: {
+              conditional: {
+                test3: () => 10,
+              },
+            },
+          },
+        },
+        string: {
+          conditional: {},
+        },
+      },
+    })
+  );
+
+  console.log("hey", result.current.fields);
+
+  expect(result.current.fields.object.conditionalValues.test).toBe(
+    "property 1"
+  );
+  expect(
+    result.current.fields.object.fields.property1.conditionalValues.test2
+  ).toBe(true);
+  expect(result.current.fields.object.fields.objectproperty).not.toHaveProperty(
+    "conditionalValues"
+  );
+  expect(result.current.fields.objectArray).not.toHaveProperty(
+    "conditionalValues"
+  );
+  expect(
+    result.current.fields.objectArray.items[0].fields.property3
+      .conditionalValues.test3
+  ).toBe(10);
+  expect(result.current.fields.string).not.toHaveProperty("conditionalValues");
+});

@@ -11,7 +11,8 @@ import {
 
 interface Props<
   T,
-  R extends ConditionalValues<T, T>,
+  TReturn,
+  R extends ConditionalValues<T, T, TReturn>,
   S extends SubmitFuncMap<T>
 > {
   initialValues: T;
@@ -20,60 +21,77 @@ interface Props<
   submit?: S;
 }
 
-const evaluateConditionalValues = <T, U, C extends ConditionalValues<T, U>>(
-  key: keyof T,
+const evaluateConditionalValues = <
+  T extends Record<string, any>,
+  U,
+  R,
+  C extends ConditionalValues<T, U, R>
+>(
+  nestedState: T,
   state: U,
+  key: keyof T,
   conditionalMap: C
-): ConditionalValueResults<T, U, C> => {
-  const conditionalValues: Partial<ConditionalValueResults<T, U, C>> = {};
-  if (conditionalMap[key]) {
+): ConditionalValueResults<T, U, R, C[keyof C]["conditional"]> => {
+  const conditionalValues: Partial<
+    ConditionalValueResults<T, U, R, C[keyof C]["conditional"]>
+  > = {};
+  if (conditionalMap[key] && conditionalMap[key]["conditional"]) {
     Object.entries(conditionalMap[key]["conditional"]).forEach(
       ([cKey, cValue]) => {
         const typedCKey = cKey as keyof C[keyof T]["conditional"];
         const typedCValue =
           cValue as C[keyof T]["conditional"][typeof typedCKey];
-        const cResult = typedCValue(state);
-        conditionalValues[typedCKey] = cResult;
+        const cResult = typedCValue(nestedState[key], state);
+        conditionalValues[typedCKey] = cResult as ReturnType<
+          C[keyof C]["conditional"][keyof C[keyof T]["conditional"]]
+        >;
       }
     );
   }
 
-  return conditionalValues as ConditionalValueResults<T, U, C>;
+  return conditionalValues as ConditionalValueResults<
+    T,
+    U,
+    R,
+    C[keyof C]["conditional"]
+  >;
+};
+
+const deleteEmptyObjectProperties = <T>(value: T): DropEmpty<T> => {
+  const newObject = { ...value };
+  Object.entries(newObject).forEach(([key, value]) => {
+    if (!Object.keys(value).length) {
+      delete newObject[key];
+    }
+  });
+  return newObject as unknown as DropEmpty<T>;
 };
 
 const createFormData = <
   T,
-  R extends ConditionalValues<T, T>,
+  U,
+  TReturn,
+  R extends ConditionalValues<T, T, TReturn>,
   S extends SubmitFuncMap<T>
 >(
   state: T,
+  allState: U,
   conditionalMap: R
-): FormData<T, R, S> => {
-  const formData: Partial<FormData<T, R, S>> = {};
+): FormData<T, TReturn, R, S> => {
+  const formData: Partial<FormData<T, TReturn, R, S>> = {};
 
   Object.entries(state).forEach(([key, value]) => {
     const typedKey = key as keyof T;
     const typedValue = value as T[keyof T];
 
-    const conditionalValues = evaluateConditionalValues(
-      typedKey,
-      state,
-      conditionalMap
-    );
-
-    const possiblyEmpty = {
-      conditionalValues: conditionalValues as ConditionalValueResults<
-        T[keyof T],
-        T,
-        ConditionalValues<T[keyof T], T>
-      >,
-    } as DropEmpty<{
-      conditionalValues: ConditionalValueResults<
-        T[keyof T],
-        T,
-        ConditionalValues<T[keyof T], T>
-      >;
-    }>;
+    const conditionalValues = deleteEmptyObjectProperties({
+      conditionalValues: evaluateConditionalValues(
+        state,
+        allState,
+        typedKey,
+        conditionalMap as ConditionalValues<T, U, TReturn>
+      ),
+    });
 
     let items = {};
 
@@ -85,10 +103,11 @@ const createFormData = <
             items: typedValue.map((item) => {
               const nestedConditionalMap = conditionalMap[typedKey]
                 ? conditionalMap[typedKey]["fields"]
-                : ({} as ConditionalValues<T[keyof T], T>);
+                : ({} as ConditionalValues<T[keyof T], T, TReturn>);
               return {
                 fields: createFormData(
                   item as typeof typedValue[number],
+                  allState,
                   nestedConditionalMap
                 ),
               };
@@ -112,20 +131,20 @@ const createFormData = <
     if (!Array.isArray(typedValue) && typedValue === Object(typedValue)) {
       const nestedConditionalMap = conditionalMap[typedKey]
         ? conditionalMap[typedKey]["fields"]
-        : ({} as ConditionalValues<T[keyof T], T>);
+        : ({} as ConditionalValues<T[keyof T], T, TReturn>);
 
       nestedFields = {
-        fields: createFormData(typedValue, nestedConditionalMap),
+        fields: createFormData(typedValue, allState, nestedConditionalMap),
       };
     }
 
-    const field: FormData<T, R, S>[keyof T] = {
+    const field: FormData<T, TReturn, R, S>[keyof T] = {
       value: typedValue,
       error: null,
-      ...possiblyEmpty,
+      ...conditionalValues,
       ...nestedFields,
       ...items,
-    } as FormData<T, R, S>[keyof T];
+    } as FormData<T, TReturn, R, S>[keyof T];
 
     // // Need to drop properties conditional values and submit if required
 
@@ -134,22 +153,27 @@ const createFormData = <
     formData[typedKey] = field;
   });
 
-  return formData as FormData<T, R, S>;
+  return formData as FormData<T, TReturn, R, S>;
 };
 
 export const useForm = <
   T,
-  R extends ConditionalValues<T, T>,
+  TReturn,
+  R extends ConditionalValues<T, T, TReturn>,
   S extends SubmitFuncMap<T>
 >(
-  props: Props<T, R, S>
+  props: Props<T, TReturn, R, S>
 ) => {
   const { initialValues, conditionalValues = {}, validation, submit } = props;
 
   const [state, setState] = useState<T>(initialValues);
   const [errorMap, setErrorMap] = useState<{}>({});
 
-  const form: FormData<T, R, S> = createFormData(state, conditionalValues);
+  const form: FormData<T, TReturn, R, S> = createFormData(
+    state,
+    state,
+    conditionalValues
+  );
 
   return {
     fields: form,
