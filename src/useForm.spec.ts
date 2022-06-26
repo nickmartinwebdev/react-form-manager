@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { it, expect } from "vitest";
 
-import { useForm } from "./useFormNew";
+import { useForm } from ".";
 
 it("should return field values from initial values", () => {
   const initialValues = {
@@ -78,7 +78,6 @@ it("should correctly evaluate any computed values", () => {
             property1: {
               computed: {
                 test2: (_, values) => {
-                  console.log(values);
                   return values.string === "string";
                 },
               },
@@ -100,8 +99,6 @@ it("should correctly evaluate any computed values", () => {
       },
     })
   );
-
-  console.log("hey", result.current.fields);
 
   expect(result.current.fields.object.computedValues.test).toBe("property 1");
   expect(
