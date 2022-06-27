@@ -8,47 +8,47 @@ export type ComputedValues<
   T extends Record<string, any>,
   U extends Record<string, any>,
   R
-> = {
-  [Key in keyof T]?: T[Key] extends Array<infer I>
+  > = {
+    [Key in keyof T]?: T[Key] extends Array<infer I>
     ? I extends Record<string, any>
-      ? {
-          computed?: ComputedValuesRecord<T[Key], U, R>;
-        } & { fields?: ComputedValues<I, U, R> }
-      : { computed?: ComputedValuesRecord<T[Key], U, R> }
+    ? {
+      computed?: ComputedValuesRecord<T[Key], U, R>;
+    } & { fields?: ComputedValues<I, U, R> }
+    : { computed?: ComputedValuesRecord<T[Key], U, R> }
     : T[Key] extends Record<string, any>
     ? {
-        computed?: ComputedValuesRecord<T[Key], U, R>;
-      } & {
-        fields?: ComputedValues<T[Key], U, R>;
-      }
+      computed?: ComputedValuesRecord<T[Key], U, R>;
+    } & {
+      fields?: ComputedValues<T[Key], U, R>;
+    }
     : { computed?: ComputedValuesRecord<T[Key], U, R> };
-};
+  };
 
 export type ComputedValuesResults<
   T,
   U,
   R,
   C extends ComputedValuesRecord<T, U, R>
-> = {
-  [Key in keyof C]: ReturnType<C[Key]>;
-};
+  > = {
+    [Key in keyof C]: ReturnType<C[Key]>;
+  };
 
 type SubmitFunc<TValue> = (value: TValue) => Promise<void>;
 
 export type SubmitFuncMap<TState> = {
   [Key in keyof TState]?: TState[Key] extends Array<infer I>
-    ? I extends Record<string, any>
-      ? {
-          submit?: SubmitFunc<TState[Key]>;
-        } & { fields?: SubmitFuncMap<I> }
-      : {
-          submit?: SubmitFunc<TState[Key]>;
-        }
-    : TState[Key] extends Record<string, any>
-    ? {
-        submit?: SubmitFunc<TState[Key]>;
-      } & { fields?: SubmitFuncMap<TState[Key]> }
-    : { submit?: SubmitFunc<TState[Key]> };
+  ? I extends Record<string, any>
+  ? {
+    submit?: SubmitFunc<TState[Key]>;
+  } & { fields?: SubmitFuncMap<I> }
+  : {
+    submit?: SubmitFunc<TState[Key]>;
+  }
+  : TState[Key] extends Record<string, any>
+  ? {
+    submit?: SubmitFunc<TState[Key]>;
+  } & { fields?: SubmitFuncMap<TState[Key]> }
+  : { submit?: SubmitFunc<TState[Key]> };
 };
 
 export type DropEmpty<T> = {
@@ -69,74 +69,74 @@ export type FormData<
   R,
   C extends ComputedValues<T, U, R>,
   S extends SubmitFuncMap<T>
-> = {
-  [Key in keyof T]: T[Key] extends Array<infer I>
+  > = {
+    [Key in keyof T]: T[Key] extends Array<infer I>
     ? I extends Record<string, any>
-      ? {
-          value: T[Key];
-        } & DropEmpty<{
-          computedValues: C[Key]["computed"] extends Record<string, any>
-            ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
-            : never;
-        }> &
-          DropEmptyFunction<{
-            submit: S[Key] extends { submit: Function }
-              ? () => Promise<SubmitFunc<T[Key]>>
-              : never;
-          }> & {
-            items: {
-              fields: FormData<
-                I,
-                U,
-                R,
-                C[Key] extends Record<string, any> ? C[Key]["fields"] : never,
-                S[Key] extends Record<string, any> ? S[Key]["fields"] : never
-              >;
-            }[];
-          }
-      : {
-          value: T[Key];
-        } & DropEmpty<{
-          computedValues: C[Key]["computed"] extends Record<string, any>
-            ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
-            : never;
-        }> &
-          DropEmptyFunction<{
-            submit: S[Key] extends { submit: Function }
-              ? () => Promise<SubmitFunc<T[Key]>>
-              : never;
-          }> & { items: NonObjectArrayData<I>[] }
+    ? {
+      value: T[Key];
+    } & DropEmpty<{
+      computedValues: C[Key]["computed"] extends Record<string, any>
+      ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
+      : never;
+    }> &
+    DropEmptyFunction<{
+      submit: S[Key] extends { submit: Function }
+      ? () => Promise<SubmitFunc<T[Key]>>
+      : never;
+    }> & {
+      items: {
+        fields: FormData<
+          I,
+          U,
+          R,
+          C[Key] extends Record<string, any> ? C[Key]["fields"] : never,
+          S[Key] extends Record<string, any> ? S[Key]["fields"] : never
+        >;
+      }[];
+    }
+    : {
+      value: T[Key];
+    } & DropEmpty<{
+      computedValues: C[Key]["computed"] extends Record<string, any>
+      ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
+      : never;
+    }> &
+    DropEmptyFunction<{
+      submit: S[Key] extends { submit: Function }
+      ? () => Promise<SubmitFunc<T[Key]>>
+      : never;
+    }> & { items: NonObjectArrayData<I>[] }
     : T[Key] extends Record<string, any>
     ? {
-        value: T[Key];
-      } & DropEmpty<{
-        computedValues: C[Key]["computed"] extends Record<string, any>
-          ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
-          : never;
-      }> &
-        DropEmptyFunction<{
-          submit: S[Key] extends { submit: Function }
-            ? () => Promise<SubmitFunc<T[Key]>>
-            : never;
-        }> & {
-          fields: FormData<
-            T[Key],
-            U,
-            R,
-            C[Key] extends Record<string, any> ? C[Key]["fields"] : never,
-            S[Key] extends Record<string, any> ? S[Key]["fields"] : never
-          >;
-        }
+      value: T[Key];
+    } & DropEmpty<{
+      computedValues: C[Key]["computed"] extends Record<string, any>
+      ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
+      : never;
+    }> &
+    DropEmptyFunction<{
+      submit: S[Key] extends { submit: Function }
+      ? () => Promise<SubmitFunc<T[Key]>>
+      : never;
+    }> & {
+      fields: FormData<
+        T[Key],
+        U,
+        R,
+        C[Key] extends Record<string, any> ? C[Key]["fields"] : never,
+        S[Key] extends Record<string, any> ? S[Key]["fields"] : never
+      >;
+    }
     : {
-        value: T[Key];
-      } & DropEmpty<{
-        computedValues: C[Key]["computed"] extends Record<string, any>
-          ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
-          : never;
-      }> &
-        DropEmptyFunction<{
-          submit: S[Key] extends { submit: Function }
-            ? () => Promise<SubmitFunc<T[Key]>>
-            : never;
-        }>;
-};
+      value: T[Key];
+    } & DropEmpty<{
+      computedValues: C[Key]["computed"] extends Record<string, any>
+      ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
+      : never;
+    }> &
+    DropEmptyFunction<{
+      submit: S[Key] extends { submit: Function }
+      ? () => Promise<SubmitFunc<T[Key]>>
+      : never;
+    }>;
+  };

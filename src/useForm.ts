@@ -6,7 +6,6 @@ import {
   FormData,
   ComputedValuesResults,
   DropEmpty,
-  ComputedValueFunc,
   ComputedValuesRecord,
 } from "./types";
 
@@ -15,7 +14,7 @@ interface Props<
   TReturn,
   R extends ComputedValues<T, T, TReturn>,
   S extends SubmitFuncMap<T>
-> {
+  > {
   initialValues: T;
   computedValues?: R;
   submit?: S;
@@ -72,16 +71,15 @@ const createFormData = <
     const typedKey = key as keyof T;
     const typedValue = value as T[keyof T];
 
-    const computedValuesMapTest = computedValuesMap[typedKey][
-      "computed"
-    ] as R[keyof R]["computed"];
-    const computedValues = deleteEmptyObjectProperties({
+
+    const computedValues = computedValuesMap[typedKey] ? deleteEmptyObjectProperties({
       computedValues: evaluateComputedValues(
         typedValue,
         allState,
-        computedValuesMapTest
+        computedValuesMap[typedKey]['computed'] ? computedValuesMap[typedKey]['computed'] as
+          ComputedValuesRecord<T[keyof T], U, TReturn> : {}
       ),
-    });
+    }) : {};
 
     let items = {};
 
