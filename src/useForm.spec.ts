@@ -116,3 +116,65 @@ it("should correctly evaluate any computed values", () => {
   ).toBe(10);
   expect(result.current.fields.string).not.toHaveProperty("computedValues");
 });
+
+it("should correctly dispatch any actions", () => {
+  const initialValues = {
+    object: {
+      property1: "property 1",
+      objectproperty: {
+        property2: "property 2",
+      },
+    },
+    objectArray: [{ property3: "property 3" }],
+    primitiveArray: ["string"],
+    string: "string",
+  };
+
+  const { result } = renderHook(() =>
+    useForm({
+      initialValues,
+      actions: {
+        object: {
+          actions: {
+            update: (setState, state) => (newState: typeof state) => {
+              setState(newState);
+            },
+          },
+          fields: {
+            property1: {
+              actions: {
+                upperCase: (setState, state) => () => {
+                  setState(state.toUpperCase());
+                },
+                lowerCase: (setState, state) => () => {
+                  setState(state.toLowerCase());
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+  );
+
+  expect(result.current.fields.object.fields.property1.dispatch).toBeDefined();
+
+  act(() => {
+    result.current.fields.object.dispatch({
+      action: "update",
+      payload: {
+        objectproperty: {
+          property2: "new property",
+        },
+        property1: "prop 1",
+      },
+    });
+  });
+
+  expect(result.current.fields.object.value).toMatchObject({
+    objectproperty: {
+      property2: "new property",
+    },
+    property1: "prop 1",
+  });
+});

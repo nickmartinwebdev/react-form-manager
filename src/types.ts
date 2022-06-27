@@ -1,5 +1,3 @@
-import { TaskState } from "vitest";
-
 export type ComputedValueFunc<T, U, R> = (value: T, values: U) => R;
 
 export type ComputedValuesRecord<T, U, R> = Partial<
@@ -65,17 +63,104 @@ type NonObjectArrayData<T> = {
   value: T;
 };
 
+type Action<TState, TParentState, TPayload extends Record<string, any>> = (
+  updateState: (state: TState) => void,
+  value: TState,
+  values: TParentState
+) => (payload: TPayload) => void;
+
+type ActionMap<
+  TState,
+  TParentState,
+  TPayload extends Record<string, any>
+> = Record<string, Action<TState, TParentState, TPayload>>;
+
+export type StateActionMap<
+  TState,
+  TParentState,
+  TPayload extends Record<string, any>
+> = {
+  [Key in keyof TState]?: TState[Key] extends Array<infer TItem>
+    ? TItem extends Record<string, any>
+      ? {
+          actions?: ActionMap<TState[Key], TParentState, TPayload>;
+        } & { fields?: StateActionMap<TItem, TParentState, TPayload> }
+      : {
+          actions?: ActionMap<TState[Key], TParentState, TPayload>;
+        }
+    : TState[Key] extends Record<string, any>
+    ? {
+        actions?: ActionMap<TState[Key], TParentState, TPayload>;
+      } & { fields?: StateActionMap<TState[Key], TParentState, TPayload> }
+    : {
+        actions?: ActionMap<TState[Key], TParentState, TPayload>;
+      };
+};
+
+const createActions = <
+  TState,
+  TParentState,
+  TPayload extends Record<string, any>,
+  TMap extends ActionMap<TState, TParentState, TPayload>
+>(
+  _: TState,
+  map: TMap
+) => {
+  return map;
+};
+
+export type MapFunctionsToActions<TActionsMap> = {
+  [Key in keyof TActionsMap]: TActionsMap[Key] extends (...args: any) => infer R
+    ? R extends (...args: infer P) => void
+      ? P extends [infer Y]
+        ? {
+            action: Key;
+            payload: Y;
+          }
+        : {
+            action: Key;
+          }
+      : never
+    : never;
+};
+
+export type Dispatch<TActionsMap> = (
+  action: MapFunctionsToActions<TActionsMap>[keyof MapFunctionsToActions<TActionsMap>]
+) => void;
+
+const test = createActions(
+  { name: { first: "", last: "" } },
+  {
+    update: (set, value) => (payload: { name: string }) =>
+      set({ ...value, name: { first: "", last: "" } }),
+    submit: (_, value) => () => {},
+  }
+);
+
+const createActionFunc = <U, T extends Dispatch<U>>(_: U, map: T) => {
+  return map;
+};
+
+const dispatch = createActionFunc(test, (action) => {
+  action.action === "update";
+});
+
+dispatch({ action: "update", payload: { name: "" } });
+
 export type FormData<
   T,
   U,
   R,
+  TActionPayload,
   C extends ComputedValues<T, U, R>,
-  S extends SubmitFuncMap<T>
+  S extends SubmitFuncMap<T>,
+  TActionMap extends StateActionMap<T, U, TActionPayload>
 > = {
   [Key in keyof T]: T[Key] extends Array<infer I>
     ? I extends Record<string, any>
       ? {
           value: T[Key];
+          dispatch: Dispatch<TActionMap[Key]["actions"]>;
         } & DropEmpty<{
           computedValues: C[Key]["computed"] extends Record<string, any>
             ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
@@ -91,13 +176,18 @@ export type FormData<
                 I,
                 U,
                 R,
+                TActionPayload,
                 C[Key] extends Record<string, any> ? C[Key]["fields"] : never,
-                S[Key] extends Record<string, any> ? S[Key]["fields"] : never
+                S[Key] extends Record<string, any> ? S[Key]["fields"] : never,
+                TActionMap[Key] extends Record<string, any>
+                  ? TActionMap[Key]["fields"]
+                  : never
               >;
             }[];
           }
       : {
           value: T[Key];
+          dispatch: Dispatch<TActionMap[Key]["actions"]>;
         } & DropEmpty<{
           computedValues: C[Key]["computed"] extends Record<string, any>
             ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
@@ -111,6 +201,7 @@ export type FormData<
     : T[Key] extends Record<string, any>
     ? {
         value: T[Key];
+        dispatch: Dispatch<TActionMap[Key]["actions"]>;
       } & DropEmpty<{
         computedValues: C[Key]["computed"] extends Record<string, any>
           ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
@@ -125,12 +216,17 @@ export type FormData<
             T[Key],
             U,
             R,
+            TActionPayload,
             C[Key] extends Record<string, any> ? C[Key]["fields"] : never,
-            S[Key] extends Record<string, any> ? S[Key]["fields"] : never
+            S[Key] extends Record<string, any> ? S[Key]["fields"] : never,
+            TActionMap[Key] extends Record<string, any>
+              ? TActionMap[Key]["fields"]
+              : never
           >;
         }
     : {
         value: T[Key];
+        dispatch: Dispatch<TActionMap[Key]["actions"]>;
       } & DropEmpty<{
         computedValues: C[Key]["computed"] extends Record<string, any>
           ? ComputedValuesResults<T[Key], U, R, C[Key]["computed"]>
@@ -142,127 +238,3 @@ export type FormData<
             : never;
         }>;
 };
-
-type Action<TState, TParentState, TPayload extends Record<string, any>> = (
-  updateState: (state: TState) => void,
-  value: TState,
-  values: TParentState
-) => (payload: TPayload) => void;
-
-type ActionMap<
-  TState,
-  TParentState,
-  TPayload extends Record<string, any>
-> = Record<string, Action<TState[keyof TState], TParentState, TPayload>>;
-
-type StateActionMap<
-  TState,
-  TParentState,
-  TPayload extends Record<string, any>
-> = {
-  [Key in keyof TState]: { actions: ActionMap<TState, TParentState, TPayload> };
-};
-
-type ActionMapResult<
-  TState,
-  TParentState,
-  TPayload extends Record<string, any>,
-  TActionMap extends ActionMap<TState, TParentState, TPayload>
-> = {
-  [Key in keyof TActionMap]: TActionMap[Key] extends (...params: any) => infer R
-    ? R extends (...args: any) => void
-      ? Parameters<R> extends [infer T]
-        ? T extends Record<string, any>
-          ? (params: T) => void
-          : (params: Parameters<R>) => void
-        : (params: Parameters<R>) => void
-      : () => void
-    : never;
-};
-
-const createActions = <
-  TState,
-  TParentState,
-  TPayload extends Record<string, any>,
-  TMap extends ActionMap<TState, TParentState, TPayload>
->(
-  _: TState,
-  map: TMap
-) => {
-  return map;
-};
-
-type MapFunctionsToActions<T> = {
-  [Key in keyof T]: T[Key] extends (...args: any) => infer R
-    ? R extends (...args: infer P) => void
-      ? P extends [infer Y]
-        ? {
-            action: Key;
-            payload: Y;
-          }
-        : {
-            action: Key;
-          }
-      : never
-    : never;
-};
-
-type Dispatch<U, T extends MapFunctionsToActions<U>> = (
-  action: T[keyof T]
-) => void;
-
-const test = createActions(
-  { name: { first: "", last: "" } },
-  {
-    update: (set, value) => (payload: { name: string }) =>
-      set({ ...value, last: payload.name }),
-    submit: (_, value) => () => {},
-  }
-);
-
-const createActionFunc = <
-  U,
-  B extends MapFunctionsToActions<U>,
-  T extends Dispatch<U, B>
->(
-  _: U,
-  map: T
-) => {
-  return map;
-};
-
-const dispatch = createActionFunc(test, (action) => {
-  action.action === "update";
-});
-
-dispatch({ action: "update", payload: { name: "" } });
-
-const createTestProps = <
-  TState,
-  TParentState,
-  TPayload,
-  TActionMap extends StateActionMap<TState, TParentState, TPayload>
->(
-  _: TState,
-  __: TParentState,
-  actionMap: TActionMap
-) => {
-  return actionMap;
-};
-
-const initial = { name: { first: { initial: "", title: "" }, last: "" } };
-
-const a = createTestProps(initial, initial, {
-  name: {
-    actions: {
-      update: (setState, state, values) => () => {
-        setState({ ...state, last: "last" });
-      },
-      submit: () => (wow: string) => {
-        console.log("hey");
-      },
-    },
-  },
-});
-
-a.name.actions.update(() => {}, initial.name, initial)();
