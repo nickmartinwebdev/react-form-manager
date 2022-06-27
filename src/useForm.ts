@@ -76,6 +76,7 @@ const createFormData = <
       computedValues: evaluateComputedValues(
         typedValue,
         allState,
+        // Don't like this type assertion 
         computedValuesMap[typedKey]['computed'] ? computedValuesMap[typedKey]['computed'] as
           ComputedValuesRecord<T[keyof T], U, TReturn> : {}
       ),

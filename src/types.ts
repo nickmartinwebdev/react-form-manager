@@ -140,3 +140,38 @@ export type FormData<
       : never;
     }>;
   };
+
+type ActionCallback<TState> = (state: TState) => TState
+
+type Action<TState, TParentState> = (updateState: (state: ActionCallback<TState> | TState) => void, value: TState, values: TParentState) => void
+
+type ActionMap<TState, TParentState> = Record<string, Action<TState[keyof TState], TParentState>>
+
+type StateActionMap<TState, TParentState> = { [Key in keyof TState]: { actions: ActionMap<TState, TParentState> } }
+
+type ActionMapResult<TState, TParentState, TActionMap extends ActionMap<TState, TParentState>> =
+  { [Key in keyof TActionMap]: TActionMap extends (state: ActionCallback<TState>) => void ? 'callback' : 'value' }
+
+const createTestProps = <TState, TParentState, TActionMap extends StateActionMap<TState, TParentState>>(
+  _: TState, __: TParentState, actionMap: TActionMap) => {
+  return actionMap
+}
+
+
+
+const initial = { name: { first: { initial: '', title: '' }, last: '' } }
+
+const a = createTestProps(initial, initial, {
+  name: {
+    actions: {
+      update: (setState) => (lastName: string) => { setState(state => ({ ...state, last: lastName })) }
+    }
+
+  }
+})
+
+
+
+
+
+
