@@ -117,11 +117,8 @@ it("should correctly evaluate any computed values", () => {
   expect(result.current.fields.string).not.toHaveProperty("computedValues");
 });
 
-
-describe('tests for dispatching actions', () => {
-
-  it('should have dispatch function available', () => {
-
+describe("tests for dispatching actions", () => {
+  it("should have dispatch function available", () => {
     const initialValues = {
       object: {
         property1: "property 1",
@@ -133,23 +130,27 @@ describe('tests for dispatching actions', () => {
       primitiveArray: ["string"],
       string: "string",
     };
-
 
     const { result } = renderHook(() =>
       useForm({
         initialValues,
-      }));
+      })
+    );
 
-    expect(result.current.fields.object.dispatch).toBeDefined()
-    expect(result.current.fields.object.fields.property1.dispatch).toBeDefined()
-    expect(result.current.fields.objectArray.dispatch).toBeDefined()
-    expect(result.current.fields.objectArray.items[0].fields.property3.dispatch).toBeDefined()
-    expect(result.current.fields.primitiveArray.dispatch).toBeDefined()
-    expect(result.current.fields.string.dispatch).toBeDefined()
-  })
+    expect(result.current.fields.object.dispatch).toBeDefined();
+    expect(
+      result.current.fields.object.fields.property1.dispatch
+    ).toBeDefined();
+    expect(result.current.fields.objectArray.dispatch).toBeDefined();
+    expect(
+      result.current.fields.objectArray.items[0].fields.property3.dispatch
+    ).toBeDefined();
+    expect(result.current.fields.objectArray.items[0].dispatch).toBeDefined();
+    expect(result.current.fields.primitiveArray.dispatch).toBeDefined();
+    expect(result.current.fields.string.dispatch).toBeDefined();
+  });
 
-  it('should dispatch default update actions', () => {
-
+  it("should dispatch default update actions", () => {
     const initialValues = {
       object: {
         property1: "property 1",
@@ -161,7 +162,6 @@ describe('tests for dispatching actions', () => {
       primitiveArray: ["string"],
       string: "string",
     };
-
 
     const { result } = renderHook(() =>
       useForm({
@@ -170,33 +170,76 @@ describe('tests for dispatching actions', () => {
     );
 
     act(() => {
-      result.current.fields.string.dispatch({ action: 'update', payload: 'updated string' })
-    })
+      result.current.fields.string.dispatch({
+        action: "update",
+        payload: "updated string",
+      });
+    });
 
-    expect(result.current.fields.string.value).toBe('updated string')
+    expect(result.current.fields.string.value).toBe("updated string");
 
     act(() => {
       result.current.fields.object.dispatch({
-        action: 'update', payload: {
-          property1: 'test value 1', objectproperty: {
-            property2: 'test value 2'
-          }
-        }
-      })
-    })
+        action: "update",
+        payload: {
+          property1: "test value 1",
+          objectproperty: {
+            property2: "test value 2",
+          },
+        },
+      });
+    });
 
     expect(result.current.fields.object.value).toMatchObject({
-      property1: 'test value 1', objectproperty: {
-        property2: 'test value 2'
-      }
-    })
+      property1: "test value 1",
+      objectproperty: {
+        property2: "test value 2",
+      },
+    });
 
     act(() => {
-      result.current.fields.object.fields.property1.dispatch({ action: 'update', payload: 'test value 1 new' })
-    })
+      result.current.fields.object.fields.property1.dispatch({
+        action: "update",
+        payload: "test value 1 new",
+      });
+    });
 
-    expect(result.current.fields.object.fields.property1.value).toBe('test value 1 new')
+    expect(result.current.fields.object.fields.property1.value).toBe(
+      "test value 1 new"
+    );
 
-  })
+    act(() => {
+      result.current.fields.objectArray.dispatch({
+        action: "update",
+        payload: [{ property3: "property 3" }, { property3: "property 3 new" }],
+      });
+    });
 
-})
+    expect(result.current.fields.objectArray.value).toMatchObject([
+      { property3: "property 3" },
+      { property3: "property 3 new" },
+    ]);
+
+    act(() => {
+      result.current.fields.objectArray.items[1].dispatch({
+        action: "update",
+        payload: { property3: "updated" },
+      });
+    });
+
+    expect(result.current.fields.objectArray.items[1].value).toMatchObject({
+      property3: "updated",
+    });
+
+    act(() => {
+      result.current.fields.objectArray.items[1].fields.property3.dispatch({
+        action: "update",
+        payload: "updated 2",
+      });
+    });
+
+    expect(
+      result.current.fields.objectArray.items[1].fields.property3.value
+    ).toBe("updated 2");
+  });
+});

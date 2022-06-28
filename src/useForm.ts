@@ -10,6 +10,7 @@ import {
   StateActionMap,
   Dispatch,
 } from "./types";
+import { updateItemAtIndex } from "./utils/array";
 
 interface Props<
   T,
@@ -18,7 +19,7 @@ interface Props<
   R extends ComputedValues<T, T, TReturn>,
   S extends SubmitFuncMap<T>,
   TActions extends StateActionMap<T, T, TActionPayload> = {}
-  > {
+> {
   initialValues: T;
   computedValues?: R;
   submit?: S;
@@ -59,11 +60,11 @@ const deleteEmptyObjectProperties = <T>(value: T): DropEmpty<T> => {
 };
 
 const createUpdateFunction = <TState>(setState: (state: TState) => void) => {
+  const updateFunc = (newState: TState) => setState(newState);
 
-  const updateFunc = (newState: TState) => setState(newState)
-
-  return (action: { action: 'update', payload: TState }) => updateFunc(action.payload)
-}
+  return (action: { action: "update"; payload: TState }) =>
+    updateFunc(action.payload);
+};
 
 const createActionFunction = <TState, TParentState, TActionsMap>(
   state: TState,
@@ -91,16 +92,14 @@ const createActionFunction = <TState, TParentState, TActionsMap>(
     ) => funcResult(payload);
   });
 
-
   // If user hasn't specified their own 'update' action we
-  // add a default update action 
-  if (!mappedActionFunctionsToActions['update']) {
-    mappedActionFunctionsToActions['update'] = (newState: TState) => setState(newState)
+  // add a default update action
+  if (!mappedActionFunctionsToActions["update"]) {
+    mappedActionFunctionsToActions["update"] = (newState: TState) =>
+      setState(newState);
   }
 
-
   const dispatch = (action: { action: keyof TActionsMap; payload: any }) => {
-    console.log("action", action);
     mappedActionFunctionsToActions[action.action](action.payload);
   };
 
@@ -133,30 +132,33 @@ const createFormData = <
 
     const computedValues = computedValuesMap[typedKey]
       ? deleteEmptyObjectProperties({
-        computedValues: evaluateComputedValues(
-          typedValue,
-          allState,
-          // Don't like this type assertion
-          computedValuesMap[typedKey]["computed"]
-            ? (computedValuesMap[typedKey][
-              "computed"
-            ] as ComputedValuesRecord<T[keyof T], U, TReturn>)
-            : {}
-        ),
-      })
+          computedValues: evaluateComputedValues(
+            typedValue,
+            allState,
+            // Don't like this type assertion
+            computedValuesMap[typedKey]["computed"]
+              ? (computedValuesMap[typedKey][
+                  "computed"
+                ] as ComputedValuesRecord<T[keyof T], U, TReturn>)
+              : {}
+          ),
+        })
       : {};
 
-    const dispatch = actionsMap[typedKey]
-      ? createActionFunction(
-        typedValue,
-        allState,
-        (newState: T[keyof T]) => {
-          console.log("new", newState, state);
-          setState({ ...state, [typedKey]: newState });
-        },
-        actionsMap[typedKey]["actions"]
-      )
-      : createUpdateFunction((newState: T[keyof T]) => setState({ ...state, [typedKey]: newState }));
+    const dispatch =
+      actionsMap[typedKey] && actionsMap[typedKey]["actions"]
+        ? createActionFunction(
+            typedValue,
+            allState,
+            (newState: T[keyof T]) => {
+              console.log("new", newState, state);
+              setState({ ...state, [typedKey]: newState });
+            },
+            actionsMap[typedKey]
+          )
+        : createUpdateFunction((newState: T[keyof T]) =>
+            setState({ ...state, [typedKey]: newState })
+          );
 
     let items = {};
 
@@ -165,7 +167,7 @@ const createFormData = <
         // if array of objects
         if (typedValue[0] === Object(typedValue[0])) {
           items = {
-            items: typedValue.map((item) => {
+            items: typedValue.map((item, index) => {
               const nestedComputedValuesMap = computedValuesMap[typedKey]
                 ? computedValuesMap[typedKey]["fields"]
                 : {};
@@ -174,18 +176,35 @@ const createFormData = <
                 ? submitFuncMap[typedKey]["fields"]
                 : {};
 
-              const nestedActionsMap = actionsMap[typedKey]
-                ? actionsMap[typedKey]["fields"]
-                : {};
+              const nestedActionsMap =
+                actionsMap[typedKey] && actionsMap[typedKey]["fields"]
+                  ? actionsMap[typedKey]["fields"]
+                  : {};
 
               return {
+                value: item,
+                dispatch: createUpdateFunction((newState: typeof item) =>
+                  setState({
+                    ...state,
+                    [typedKey]: updateItemAtIndex(typedValue, index, newState),
+                  })
+                ),
                 fields: createFormData(
                   item as typeof typedValue[number],
                   allState,
                   nestedComputedValuesMap,
                   nestedSubmitFunctionsMap,
                   nestedActionsMap,
-                  () => { }
+                  (newState: typeof item) => {
+                    setState({
+                      ...state,
+                      [typedKey]: updateItemAtIndex(
+                        typedValue,
+                        index,
+                        newState
+                      ),
+                    });
+                  }
                 ),
               };
             }),
