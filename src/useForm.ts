@@ -9,7 +9,6 @@ import {
   ComputedValuesRecord,
   StateActionMap,
   Dispatch,
-  MapFunctionsToActions,
 } from "./types";
 
 interface Props<
@@ -18,8 +17,8 @@ interface Props<
   TActionPayload,
   R extends ComputedValues<T, T, TReturn>,
   S extends SubmitFuncMap<T>,
-  TActions extends StateActionMap<T, T, TActionPayload>
-> {
+  TActions extends StateActionMap<T, T, TActionPayload> = {}
+  > {
   initialValues: T;
   computedValues?: R;
   submit?: S;
@@ -59,6 +58,13 @@ const deleteEmptyObjectProperties = <T>(value: T): DropEmpty<T> => {
   return newObject as unknown as DropEmpty<T>;
 };
 
+const createUpdateFunction = <TState>(setState: (state: TState) => void) => {
+
+  const updateFunc = (newState: TState) => setState(newState)
+
+  return (action: { action: 'update', payload: TState }) => updateFunc(action.payload)
+}
+
 const createActionFunction = <TState, TParentState, TActionsMap>(
   state: TState,
   parentState: TParentState,
@@ -71,7 +77,6 @@ const createActionFunction = <TState, TParentState, TActionsMap>(
   Object.entries(actionFunctionsMap).forEach(([key, func]) => {
     const typedKey = key as keyof TActionsMap;
     const typedFunc = func as TActionsMap[keyof TActionsMap];
-    console.log("result", typedKey, typedFunc);
     if (typeof typedFunc !== "function") {
       return;
     }
@@ -86,7 +91,13 @@ const createActionFunction = <TState, TParentState, TActionsMap>(
     ) => funcResult(payload);
   });
 
-  console.log("mapped", mappedActionFunctionsToActions);
+
+  // If user hasn't specified their own 'update' action we
+  // add a default update action 
+  if (!mappedActionFunctionsToActions['update']) {
+    mappedActionFunctionsToActions['update'] = (newState: TState) => setState(newState)
+  }
+
 
   const dispatch = (action: { action: keyof TActionsMap; payload: any }) => {
     console.log("action", action);
@@ -122,30 +133,30 @@ const createFormData = <
 
     const computedValues = computedValuesMap[typedKey]
       ? deleteEmptyObjectProperties({
-          computedValues: evaluateComputedValues(
-            typedValue,
-            allState,
-            // Don't like this type assertion
-            computedValuesMap[typedKey]["computed"]
-              ? (computedValuesMap[typedKey][
-                  "computed"
-                ] as ComputedValuesRecord<T[keyof T], U, TReturn>)
-              : {}
-          ),
-        })
+        computedValues: evaluateComputedValues(
+          typedValue,
+          allState,
+          // Don't like this type assertion
+          computedValuesMap[typedKey]["computed"]
+            ? (computedValuesMap[typedKey][
+              "computed"
+            ] as ComputedValuesRecord<T[keyof T], U, TReturn>)
+            : {}
+        ),
+      })
       : {};
 
     const dispatch = actionsMap[typedKey]
       ? createActionFunction(
-          typedValue,
-          allState,
-          (newState: T[keyof T]) => {
-            console.log("new", newState, state);
-            setState({ ...state, [typedKey]: newState });
-          },
-          actionsMap[typedKey]["actions"]
-        )
-      : () => {};
+        typedValue,
+        allState,
+        (newState: T[keyof T]) => {
+          console.log("new", newState, state);
+          setState({ ...state, [typedKey]: newState });
+        },
+        actionsMap[typedKey]["actions"]
+      )
+      : createUpdateFunction((newState: T[keyof T]) => setState({ ...state, [typedKey]: newState }));
 
     let items = {};
 
@@ -174,7 +185,7 @@ const createFormData = <
                   nestedComputedValuesMap,
                   nestedSubmitFunctionsMap,
                   nestedActionsMap,
-                  () => {}
+                  () => { }
                 ),
               };
             }),
@@ -214,7 +225,7 @@ const createFormData = <
           nestedComputedValuesMap,
           nestedSubmitFunctionsMap,
           nestedActionsMap,
-          () => {}
+          (newState: T[keyof T]) => setState({ ...state, [typedKey]: newState })
         ),
       };
     }
@@ -255,7 +266,7 @@ export const useForm = <
   TActionsPayload,
   R extends ComputedValues<T, T, TReturn>,
   S extends SubmitFuncMap<T>,
-  TActionsMap extends StateActionMap<T, T, TActionsPayload>
+  TActionsMap extends StateActionMap<T, T, TActionsPayload> = {}
 >(
   props: Props<T, TReturn, TActionsPayload, R, S, TActionsMap>
 ) => {
