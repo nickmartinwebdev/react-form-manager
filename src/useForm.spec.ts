@@ -150,96 +150,199 @@ describe("tests for dispatching actions", () => {
     expect(result.current.fields.string.dispatch).toBeDefined();
   });
 
-  it("should dispatch default update actions", () => {
+});
+
+
+describe('tests for dispatching actions', () => {
+
+  it('should dispatch default and described actions for primitive fields', () => {
+
     const initialValues = {
-      object: {
-        property1: "property 1",
-        objectproperty: {
-          property2: "property 2",
-        },
-      },
-      objectArray: [{ property3: "property 3" }],
-      primitiveArray: ["string"],
-      string: "string",
+      property: "initial",
     };
 
     const { result } = renderHook(() =>
       useForm({
         initialValues,
+        computedValues: {},
+        submit: {},
+        actions: {
+          property: {
+            actions: {
+              uppercase: (setState, state) => () => { setState(state.toUpperCase()) }
+            }
+          }
+        }
       })
     );
 
-    act(() => {
-      result.current.fields.string.dispatch({
-        action: "update",
-        payload: "updated string",
-      });
-    });
-
-    expect(result.current.fields.string.value).toBe("updated string");
+    expect(result.current.fields.property.dispatch).toBeDefined()
 
     act(() => {
-      result.current.fields.object.dispatch({
-        action: "update",
-        payload: {
-          property1: "test value 1",
-          objectproperty: {
-            property2: "test value 2",
-          },
-        },
-      });
-    });
+      result.current.fields.property.dispatch({ action: 'update', payload: 'updated' })
+    })
 
-    expect(result.current.fields.object.value).toMatchObject({
-      property1: "test value 1",
-      objectproperty: {
-        property2: "test value 2",
-      },
-    });
+    expect(result.current.fields.property.value).toBe('updated')
 
     act(() => {
-      result.current.fields.object.fields.property1.dispatch({
-        action: "update",
-        payload: "test value 1 new",
-      });
-    });
+      result.current.fields.property.dispatch({ action: 'uppercase' })
+    })
 
-    expect(result.current.fields.object.fields.property1.value).toBe(
-      "test value 1 new"
+    expect(result.current.fields.property.value).toBe('UPDATED')
+
+  })
+
+  it('should dispatch default and described actions for object fields', () => {
+
+    const initialValues = {
+      property: {
+        nestedField: 'initial',
+        nestedObject: {
+          deeperNestedField: 'initial'
+        }
+      }
+    };
+
+    const { result } = renderHook(() =>
+      useForm({
+        initialValues,
+        computedValues: {},
+        submit: {},
+        actions: {
+          property: {
+            actions: {
+              reset: (setState) => () => {
+                setState({
+                  nestedField: 'initial',
+                  nestedObject: { deeperNestedField: 'initial' }
+                })
+              }
+            },
+            fields: {
+              nestedObject: {
+                fields: {
+                  deeperNestedField: {
+                    actions: {
+                      setToHappy: (setState) => () => { setState('happy') }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      })
     );
 
-    act(() => {
-      result.current.fields.objectArray.dispatch({
-        action: "update",
-        payload: [{ property3: "property 3" }, { property3: "property 3 new" }],
-      });
-    });
-
-    expect(result.current.fields.objectArray.value).toMatchObject([
-      { property3: "property 3" },
-      { property3: "property 3 new" },
-    ]);
+    expect(result.current.fields.property.dispatch).toBeDefined()
 
     act(() => {
-      result.current.fields.objectArray.items[1].dispatch({
-        action: "update",
-        payload: { property3: "updated" },
-      });
-    });
+      result.current.fields.property.dispatch({
+        action: 'update',
+        payload: {
+          nestedField: 'updated',
+          nestedObject: { deeperNestedField: 'updated' }
+        }
+      })
+    })
 
-    expect(result.current.fields.objectArray.items[1].value).toMatchObject({
-      property3: "updated",
-    });
+    expect(result.current.fields.property.value).toMatchObject({
+      nestedField: 'updated',
+      nestedObject: { deeperNestedField: 'updated' }
+    })
 
     act(() => {
-      result.current.fields.objectArray.items[1].fields.property3.dispatch({
-        action: "update",
-        payload: "updated 2",
-      });
-    });
+      result.current.fields.property.dispatch({
+        action: 'reset',
+      })
+    })
 
-    expect(
-      result.current.fields.objectArray.items[1].fields.property3.value
-    ).toBe("updated 2");
-  });
-});
+    expect(result.current.fields.property.value).toMatchObject({
+      nestedField: 'initial',
+      nestedObject: { deeperNestedField: 'initial' }
+    })
+
+    expect(result.current.fields.property.fields.nestedObject.fields.deeperNestedField.dispatch).toBeDefined()
+
+    act(() => {
+      result.current.fields.property.fields.nestedObject.fields.deeperNestedField.dispatch(
+        { action: 'update', payload: 'updated' })
+    })
+
+    expect(result.current.fields.property.fields.nestedObject.fields.deeperNestedField.value).toBe('updated')
+
+    act(() => {
+      result.current.fields.property.fields.nestedObject.fields.deeperNestedField.dispatch(
+        { action: 'setToHappy', })
+    })
+
+    expect(result.current.fields.property.fields.nestedObject.fields.deeperNestedField.value).toBe('happy')
+
+  })
+
+  it('should dispatch default and described actions for array object fields', () => {
+
+    const initialValues = {
+      property: [{ field: 'initial' }]
+    };
+
+    const { result } = renderHook(() =>
+      useForm({
+        initialValues,
+        computedValues: {},
+        submit: {},
+        actions: {
+          property: {
+            actions: {
+              addItem: (setState, state) => (item: typeof state[number]) => { setState([...state, item]) }
+            },
+            fields: {
+              field: {
+                actions: {
+                  uppercase: (setState, state) => () => { setState(state.toUpperCase()) }
+                }
+              }
+            }
+          }
+        }
+      })
+    );
+
+    expect(result.current.fields.property.dispatch).toBeDefined()
+
+    act(() => {
+      result.current.fields.property.dispatch({ action: 'update', payload: [] })
+    })
+
+    expect(result.current.fields.property.value).toMatchObject([])
+
+    act(() => {
+      result.current.fields.property.dispatch({ action: 'addItem', payload: { field: 'new item' } })
+    })
+
+    expect(result.current.fields.property.value).toMatchObject([{ field: 'new item' }])
+    expect(result.current.fields.property.items[0].dispatch).toBeDefined()
+
+    act(() => {
+      result.current.fields.property.items[0].dispatch({ action: 'update', payload: { field: 'updated item' } })
+    })
+
+    expect(result.current.fields.property.value).toMatchObject([{ field: 'updated item' }])
+    expect(result.current.fields.property.items[0].fields.field.dispatch).toBeDefined()
+
+    act(() => {
+      result.current.fields.property.items[0].fields.field.dispatch({ action: 'update', payload: 'updated' })
+    })
+
+    expect(result.current.fields.property.items[0].fields.field.value).toBe('updated')
+
+    act(() => {
+      result.current.fields.property.items[0].fields.field.dispatch({ action: 'uppercase' })
+    })
+
+    expect(result.current.fields.property.items[0].value).toMatchObject({ field: 'UPDATED' })
+
+  })
+
+
+})

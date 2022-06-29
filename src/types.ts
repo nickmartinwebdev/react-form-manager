@@ -239,7 +239,7 @@ export type FormData<
     : {
         value: T[Key];
         dispatch: Dispatch<
-          { update: Action<T[Key], U, T[Key]> } & TActionMap[Key]["actions"]
+          { update: Action<T[Key], U, TActionPayload> } & TActionMap[Key]["actions"]
         >;
       } & DropEmpty<{
         computedValues: C[Key]["computed"] extends Record<string, any>
