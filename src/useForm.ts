@@ -279,14 +279,14 @@ const createFormData = <
 };
 
 export const useForm = <
-  T,
+  TState,
   TReturn,
   TActionsPayload,
-  R extends ComputedValues<T, T, TReturn>,
-  S extends SubmitFuncMap<T>,
-  TActionsMap extends StateActionMap<T, T, TActionsPayload>
+  TComputedValues extends ComputedValues<TState, TState, TReturn>,
+  S extends SubmitFuncMap<TState>,
+  TActionsMap extends StateActionMap<TState, TState, TActionsPayload>
 >(
-  props: Props<T, TReturn, TActionsPayload, R, S, TActionsMap>
+  props: Props<TState, TReturn, TActionsPayload, TComputedValues, S, TActionsMap>
 ) => {
   const {
     initialValues,
@@ -295,10 +295,10 @@ export const useForm = <
     actions = {},
   } = props;
 
-  const [state, setState] = useState<T>(initialValues);
+  const [state, setState] = useState<TState>(initialValues);
 
-  const form: FormData<T, T, TReturn, TActionsPayload, R, S, TActionsMap> =
-    createFormData(state, state, computedValues, submit, actions, (state: T) =>
+  const form: FormData<TState, TState, TReturn, TActionsPayload, TComputedValues, S, TActionsMap> =
+    createFormData(state, state, computedValues, submit, actions, (state: TState) =>
       setState(state)
     );
 

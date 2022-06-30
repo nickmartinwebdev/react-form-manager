@@ -344,5 +344,41 @@ describe('tests for dispatching actions', () => {
 
   })
 
+  it('should dispatch default and described actions for primitive array fields', () => {
+
+    const initialValues = {
+      property: ['first']
+    };
+
+    const { result } = renderHook(() =>
+      useForm({
+        initialValues,
+        computedValues: {},
+        submit: {},
+        actions: {
+          property: {
+            actions: {
+              addItem: (setState, state) => (item: typeof state[number]) => { setState([...state, item]) }
+            },
+          }
+        }
+      })
+    );
+
+    expect(result.current.fields.property.dispatch).toBeDefined()
+
+    act(() => {
+
+      result.current.fields.property.dispatch({ action: 'update', payload: ['first', 'second'] })
+    })
+
+    expect(result.current.fields.property.value).toMatchObject(['first', 'second'])
+
+    act(() => {
+      result.current.fields.property.dispatch({ action: 'addItem', payload: 'third' })
+    })
+
+    expect(result.current.fields.property.value).toMatchObject(['first', 'second', 'third'])
+  })
 
 })
