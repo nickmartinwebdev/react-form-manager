@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import {
   ComputedValues,
-  SubmitFuncMap,
   FormData,
   ComputedValuesResults,
   DropEmpty,
@@ -13,40 +12,38 @@ import {
 import { updateItemAtIndex } from "./utils/array";
 
 interface Props<
-  T,
-  TReturn,
+  TState,
+  TComputedValuesReturn,
   TActionPayload,
-  R extends ComputedValues<T, T, TReturn>,
-  S extends SubmitFuncMap<T>,
-  TActions extends StateActionMap<T, T, TActionPayload>
+  TComputedValuesMap extends ComputedValues<TState, TState, TComputedValuesReturn>,
+  TActions extends StateActionMap<TState, TState, TActionPayload>
   > {
-  initialValues: T;
-  computedValues?: R;
-  submit?: S;
+  initialValues: TState;
+  computedValues?: TComputedValuesMap;
   actions?: TActions;
 }
 
 const evaluateComputedValues = <
-  T,
-  U,
-  R,
-  C extends ComputedValuesRecord<T, U, R>
+  TState,
+  TParentState,
+  TComputedValuesReturn,
+  TComputedValuesMap extends ComputedValuesRecord<TState, TParentState, TComputedValuesReturn>
 >(
-  nestedState: T,
-  state: U,
-  computedValueMap: C
-): ComputedValuesResults<T, U, R, C> => {
-  const computedValues: Partial<ComputedValuesResults<T, U, R, C>> = {};
+  state: TState,
+  parentState: TParentState,
+  computedValueMap: TComputedValuesMap
+): ComputedValuesResults<TState, TParentState, TComputedValuesReturn, TComputedValuesMap> => {
+  const computedValues: Partial<ComputedValuesResults<TState, TParentState, TComputedValuesReturn, TComputedValuesMap>> = {};
   Object.entries(computedValueMap).forEach(([cKey, cValue]) => {
-    const computedValueKey = cKey as keyof C;
+    const computedValueKey = cKey as keyof TComputedValuesMap;
     const computedValueFunc = cValue;
-    const computedValueResult = computedValueFunc(nestedState, state);
+    const computedValueResult = computedValueFunc(state, parentState);
     computedValues[computedValueKey] = computedValueResult as ReturnType<
-      C[keyof C]
+      TComputedValuesMap[keyof TComputedValuesMap]
     >;
   });
 
-  return computedValues as ComputedValuesResults<T, U, R, C>;
+  return computedValues as ComputedValuesResults<TState, TParentState, TComputedValuesReturn, TComputedValuesMap>;
 };
 
 const deleteEmptyObjectProperties = <T>(value: T): DropEmpty<T> => {
@@ -107,28 +104,26 @@ const createActionFunction = <TState, TParentState, TActionsMap>(
 };
 
 const createFormData = <
-  T,
-  U,
-  TReturn,
+  TState,
+  TParentState,
+  TComputedValuesReturn,
   TActionsPayload,
-  R extends ComputedValues<T, U, TReturn>,
-  S extends SubmitFuncMap<T>,
-  TActionsMap extends StateActionMap<T, U, TActionsPayload>
+  TComputedValuesMap extends ComputedValues<TState, TParentState, TComputedValuesReturn>,
+  TActionsMap extends StateActionMap<TState, TParentState, TActionsPayload>
 >(
-  state: T,
-  allState: U,
-  computedValuesMap: R,
-  submitFuncMap: S,
+  state: TState,
+  allState: TParentState,
+  computedValuesMap: TComputedValuesMap,
   actionsMap: TActionsMap,
-  setState: (state: T) => void
-): FormData<T, U, TReturn, TActionsPayload, R, S, TActionsMap> => {
+  setState: (state: TState) => void
+): FormData<TState, TParentState, TComputedValuesReturn, TActionsPayload, TComputedValuesMap, TActionsMap> => {
   const formData: Partial<
-    FormData<T, U, TReturn, TActionsPayload, R, S, TActionsMap>
+    FormData<TState, TParentState, TComputedValuesReturn, TActionsPayload, TComputedValuesMap, TActionsMap>
   > = {};
 
   Object.entries(state).forEach(([key, value]) => {
-    const typedKey = key as keyof T;
-    const typedValue = value as T[keyof T];
+    const typedKey = key as keyof TState;
+    const typedValue = value as TState[keyof TState];
 
     const computedValues = computedValuesMap[typedKey]
       ? deleteEmptyObjectProperties({
@@ -139,7 +134,7 @@ const createFormData = <
           computedValuesMap[typedKey]["computed"]
             ? (computedValuesMap[typedKey][
               "computed"
-            ] as ComputedValuesRecord<T[keyof T], U, TReturn>)
+            ] as ComputedValuesRecord<TState[keyof TState], TParentState, TComputedValuesReturn>)
             : {}
         ),
       })
@@ -150,12 +145,12 @@ const createFormData = <
         ? createActionFunction(
           typedValue,
           allState,
-          (newState: T[keyof T]) => {
+          (newState: TState[keyof TState]) => {
             setState({ ...state, [typedKey]: newState });
           },
           actionsMap[typedKey]['actions']
         )
-        : createUpdateFunction((newState: T[keyof T]) =>
+        : createUpdateFunction((newState: TState[keyof TState]) =>
           setState({ ...state, [typedKey]: newState })
         );
 
@@ -169,10 +164,6 @@ const createFormData = <
             items: typedValue.map((item, index) => {
               const nestedComputedValuesMap = computedValuesMap[typedKey]
                 ? computedValuesMap[typedKey]["fields"]
-                : {};
-
-              const nestedSubmitFunctionsMap = submitFuncMap[typedKey]
-                ? submitFuncMap[typedKey]["fields"]
                 : {};
 
               const nestedActionsMap =
@@ -192,7 +183,6 @@ const createFormData = <
                   item as typeof typedValue[number],
                   allState,
                   nestedComputedValuesMap,
-                  nestedSubmitFunctionsMap,
                   nestedActionsMap,
                   (newState: typeof item) => {
                     setState({
@@ -228,10 +218,6 @@ const createFormData = <
         ? computedValuesMap[typedKey]["fields"]
         : {};
 
-      const nestedSubmitFunctionsMap = submitFuncMap[typedKey]
-        ? submitFuncMap[typedKey]["fields"]
-        : {};
-
       const nestedActionsMap = actionsMap[typedKey]
         ? actionsMap[typedKey]["fields"]
         : {};
@@ -241,39 +227,36 @@ const createFormData = <
           typedValue,
           allState,
           nestedComputedValuesMap,
-          nestedSubmitFunctionsMap,
           nestedActionsMap,
-          (newState: T[keyof T]) => setState({ ...state, [typedKey]: newState })
+          (newState: TState[keyof TState]) => setState({ ...state, [typedKey]: newState })
         ),
       };
     }
 
     const field: FormData<
-      T,
-      U,
-      TReturn,
+      TState,
+      TParentState,
+      TComputedValuesReturn,
       TActionsPayload,
-      R,
-      S,
+      TComputedValuesMap,
       TActionsMap
-    >[keyof T] = {
+    >[keyof TState] = {
       value: typedValue,
       ...computedValues,
       ...nestedFields,
       ...items,
       dispatch,
-    } as FormData<T, U, TReturn, TActionsPayload, R, S, TActionsMap>[keyof T];
+    } as FormData<TState, TParentState, TComputedValuesReturn, TActionsPayload, TComputedValuesMap, TActionsMap>[keyof TState];
 
     formData[typedKey] = field;
   });
 
   return formData as FormData<
-    T,
-    U,
-    TReturn,
+    TState,
+    TParentState,
+    TComputedValuesReturn,
     TActionsPayload,
-    R,
-    S,
+    TComputedValuesMap,
     TActionsMap
   >;
 };
@@ -283,22 +266,20 @@ export const useForm = <
   TReturn,
   TActionsPayload,
   TComputedValues extends ComputedValues<TState, TState, TReturn>,
-  S extends SubmitFuncMap<TState>,
   TActionsMap extends StateActionMap<TState, TState, TActionsPayload>
 >(
-  props: Props<TState, TReturn, TActionsPayload, TComputedValues, S, TActionsMap>
+  props: Props<TState, TReturn, TActionsPayload, TComputedValues, TActionsMap>
 ) => {
   const {
     initialValues,
     computedValues = {},
-    submit = {},
     actions = {},
   } = props;
 
   const [state, setState] = useState<TState>(initialValues);
 
-  const form: FormData<TState, TState, TReturn, TActionsPayload, TComputedValues, S, TActionsMap> =
-    createFormData(state, state, computedValues, submit, actions, (state: TState) =>
+  const form: FormData<TState, TState, TReturn, TActionsPayload, TComputedValues, TActionsMap> =
+    createFormData(state, state, computedValues, actions, (state: TState) =>
       setState(state)
     );
 
