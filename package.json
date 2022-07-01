@@ -1,7 +1,7 @@
 {
-  "name": "simply-forms",
-  "version": "0.1.1",
-  "description": "A package to manage state for react forms",
+  "name": "use-organised-state",
+  "version": "0.1.0",
+  "description": "A package to help organise state for react",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
